@@ -2,6 +2,7 @@ package mysql
 
 import (
 	"database/sql"
+	"fmt"
 
 	dbfty "github.com/xm-chentl/go-dbfty"
 	"github.com/xm-chentl/go-dbfty/grammar/sql/mysql"
@@ -9,6 +10,36 @@ import (
 
 //DRIVERNAME 获取名
 const DRIVERNAME = "mysql"
+
+type Operation struct {
+	Id       string
+	Host     string
+	Port     uint16
+	DbName   string
+	User     string
+	Password string
+}
+
+func (o *Operation) connStr() string {
+	if o.Host == "" {
+		o.Host = "127.0.0.1"
+	}
+	if o.Port == 0 {
+		o.Port = 3306
+	}
+	if o.User == "" {
+		o.User = "root"
+	}
+
+	return fmt.Sprintf(
+		"%s:%s@tcp(%s:%d)/%s?charset=utf8",
+		o.User,
+		o.Password,
+		o.Host,
+		o.Port,
+		o.DbName,
+	)
+}
 
 type factory struct {
 	isProxy      bool
@@ -52,6 +83,10 @@ func (m *factory) getRepository() *repository {
 	}
 
 	return m.repository
+}
+
+func ConnectionString(opt Operation) string {
+	return opt.connStr()
 }
 
 // Proxy 获取一个mysql实例
