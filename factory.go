@@ -11,8 +11,8 @@ import (
 //DRIVERNAME 获取名
 const DRIVERNAME = "mysql"
 
+// Operation 选项
 type Operation struct {
-	Id       string
 	Host     string
 	Port     uint16
 	DbName   string
@@ -62,6 +62,10 @@ func (m *factory) Uow() dbfty.IUnitOfWork {
 	return m.repository.uow
 }
 
+func (m factory) IsHealth() (bool, error) {
+	return true, nil
+}
+
 func (m *factory) getRepository() *repository {
 	if m.repository == nil {
 		readerDb, err := sql.Open(DRIVERNAME, m.readerOfConn)
@@ -85,6 +89,7 @@ func (m *factory) getRepository() *repository {
 	return m.repository
 }
 
+// ConnectionString 连接字符串
 func ConnectionString(opt Operation) string {
 	return opt.connStr()
 }
