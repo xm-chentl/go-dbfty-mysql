@@ -2,6 +2,7 @@ package mysql
 
 import (
 	"database/sql"
+	"fmt"
 
 	// mysql
 	_ "github.com/go-sql-driver/mysql"
@@ -49,4 +50,27 @@ func (m repository) Query() dbfty.IQuery {
 		db:      m.readerDb,
 		grammar: m.grammar.Select(),
 	}
+}
+
+func (m repository) Ping() (bool, error) {
+	var err error
+	errs := []string{}
+	if m.readerDb != nil {
+		if err = m.readerDb.Ping(); err != nil {
+			errs = append(errs, "reader")
+		}
+	}
+	if m.writerDb != nil {
+		if err = m.writerDb.Ping(); err != nil {
+			errs = append(errs, "writer")
+		}
+	}
+	switch len(errs) {
+	case 2:
+		return false, fmt.Errorf("mysql connection failed")
+	case 1:
+		return false, fmt.Errorf("sql(%s) connection failed", errs[0])
+	}
+
+	return true, err
 }

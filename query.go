@@ -56,10 +56,10 @@ func (q *query) Where(where string, args ...interface{}) dbfty.IQuery {
 	return q
 }
 
-func (q query) Count(entry interface{}) (int, error) {
+func (q query) Count(entity interface{}) (int, error) {
 	sql, args, err := q.grammar.Aggregation(
 		aggregation.Count("*"),
-	).Generate(entry)
+	).Generate(entity)
 	if err != nil {
 		return 0, err
 	}
@@ -80,14 +80,14 @@ func (q query) Count(entry interface{}) (int, error) {
 	return total, nil
 }
 
-func (q query) First(entry interface{}) error {
-	rt := reflect.TypeOf(entry)
+func (q query) First(entity interface{}) error {
+	rt := reflect.TypeOf(entity)
 	if rt.Kind() != reflect.Ptr {
 		return fmt.Errorf("r is not ptr")
 	}
 
 	rt = rt.Elem()
-	rv := reflect.ValueOf(entry).Elem()
+	rv := reflect.ValueOf(entity).Elem()
 	rvs := reflect.New(
 		reflect.SliceOf(rt),
 	).Elem()
@@ -101,22 +101,59 @@ func (q query) First(entry interface{}) error {
 	return nil
 }
 
-func (q query) ToArray(entries interface{}) error {
-	rt := reflect.TypeOf(entries)
+func (q query) ToArray(entities interface{}) error {
+	rt := reflect.TypeOf(entities)
 	if rt.Kind() != reflect.Ptr {
-		return fmt.Errorf("the parameter entries is not a pointer")
+		return fmt.Errorf("entities is not a pointer")
 	}
 
 	rt = rt.Elem()
-	rv := reflect.ValueOf(entries).Elem()
+	rv := reflect.ValueOf(entities).Elem()
 	if rt.Kind() != reflect.Array && rt.Kind() != reflect.Slice {
-		return fmt.Errorf("the parameter entries is not array or slice")
+		return fmt.Errorf("entities is not array or slice")
 	}
 
 	// 获取数据中元素的实例
-	if err := q.getData(utils.GetTypeBySlice(entries), rv); err != nil {
+	if err := q.getData(utils.GetTypeBySlice(entities), rv); err != nil {
 		return err
 	}
+
+	return nil
+}
+
+func (q query) Exc(entities interface{}, sql string, args ...interface{}) error {
+	rt := utils.GetTypeBySlice(entities)
+	rv := reflect.New(rt)
+	table, err := metadata.Get(rv.Interface())
+	if err != nil {
+		return err
+	}
+
+	rows, err := q.db.Query(sql, args...)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	columnsOfRow, columnTypesOfRow := q.getRowsStruct(rows)
+	bindRvs := make([]interface{}, 0)
+	for i, columnOfRow := range columnsOfRow {
+		if column, ok := table.GetColumnsByMap()[columnOfRow]; ok {
+			// 字段的指针数组
+			bindRvs = append(bindRvs, rv.FieldByName(column.GetStruct().Name).Addr().Interface())
+		} else {
+			bindRvs = append(bindRvs, reflect.New(columnTypesOfRow[i]).Interface())
+		}
+	}
+
+	results := reflect.MakeSlice(reflect.SliceOf(rv.Type()), 0, 0)
+	for rows.Next() {
+		if err := rows.Scan(bindRvs...); err != nil {
+			return err
+		}
+		results = reflect.Append(results, rv)
+	}
+	reflect.ValueOf(entities).Elem().Set(results)
 
 	return nil
 }

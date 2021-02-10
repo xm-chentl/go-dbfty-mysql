@@ -63,7 +63,7 @@ func (m *factory) Uow() dbfty.IUnitOfWork {
 }
 
 func (m factory) IsHealth() (bool, error) {
-	return true, nil
+	return m.getRepository().Ping()
 }
 
 func (m *factory) getRepository() *repository {
@@ -72,6 +72,7 @@ func (m *factory) getRepository() *repository {
 		if err != nil {
 			panic(err)
 		}
+
 		m.repository = &repository{
 			readerDb: readerDb,
 			writerDb: readerDb,
