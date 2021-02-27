@@ -52,7 +52,7 @@ func (m repository) Query() dbfty.IQuery {
 	}
 }
 
-func (m repository) Ping() (bool, error) {
+func (m repository) Ping() error {
 	var err error
 	errs := []string{}
 	if m.readerDb != nil {
@@ -67,10 +67,10 @@ func (m repository) Ping() (bool, error) {
 	}
 	switch len(errs) {
 	case 2:
-		return false, fmt.Errorf("mysql connection failed")
+		return fmt.Errorf("mysql connection failed")
 	case 1:
-		return false, fmt.Errorf("sql(%s) connection failed", errs[0])
+		return fmt.Errorf("sql(%s) connection failed", errs[0])
 	}
 
-	return true, err
+	return nil
 }

@@ -62,7 +62,7 @@ func (m *factory) Uow() dbfty.IUnitOfWork {
 	return m.repository.uow
 }
 
-func (m factory) IsHealth() (bool, error) {
+func (m factory) IsHealth() error {
 	return m.getRepository().Ping()
 }
 
